@@ -51,6 +51,16 @@ RUN pixi install --locked
 # without this -- there's no system /etc/nanorc by default.
 RUN echo 'include "/opt/app/.pixi/envs/default/share/nano/*.nanorc"' > /etc/nanorc
 
+# Vim indentation defaults: conda-forge's vim looks for its system vimrc
+# at $VIM/vimrc, which for this package resolves to
+# .../share/vim/vimrc -- there's no system vimrc there by default, so
+# `tabstop` etc. were falling back to vim's compiled-in default of 8/tabs.
+RUN cat > /opt/app/.pixi/envs/default/share/vim/vimrc <<'VIMRCEOF'
+set tabstop=4      " Number of visual spaces a Tab character takes up
+set shiftwidth=4   " Number of spaces used for each step of (auto)indent
+set expandtab      " Converts tabs to spaces
+VIMRCEOF
+
 # Welcome-banner text: a colorized "hhmi | janelia" wordmark, matching
 # https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png
 # for a dark terminal background. Rendered as real ANSI-colored text, not
@@ -73,6 +83,7 @@ PS1='student@janelia:\w\$ '
 eval "$(dircolors -b 2>/dev/null)"
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
+alias vi='vim'
 [ -t 1 ] && cat /opt/app/motd.ans
 RCEOF
 
