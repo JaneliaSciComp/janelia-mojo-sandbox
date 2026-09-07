@@ -4,3 +4,7 @@
 
 [1mWelcome to the Janelia Mojo Sandbox[0m
 
+[1;38;2;230;180;40mNote:[0m /work is shared across the class -- please create your own
+directory (e.g. [1mmkdir /work/yourname[0m) so you don't overwrite
+classmates' files.
+
