@@ -51,10 +51,12 @@ RUN pixi install --locked
 # without this -- there's no system /etc/nanorc by default.
 RUN echo 'include "/opt/app/.pixi/envs/default/share/nano/*.nanorc"' > /etc/nanorc
 
-# Welcome-banner art: a truecolor ANSI rendering (via `chafa`, not a
-# runtime dependency -- pre-rendered once offline and committed as a
-# static asset) of the HHMI Janelia logo for a dark terminal background
-# (https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png).
+# Welcome-banner text: a colorized "hhmi | janelia" wordmark, matching
+# https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png
+# for a dark terminal background. Rendered as real ANSI-colored text, not
+# pixel/block art -- the source logo is itself mostly small wordmark
+# text, which blurs into illegibility once rasterized to a block-art
+# resolution any terminal can actually display.
 COPY container/motd.ans /opt/app/motd.ans
 
 # Classroom cosmetics: Ubuntu's default /etc/bash.bashrc (sourced by every
