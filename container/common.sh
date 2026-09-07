@@ -195,10 +195,12 @@ unset _p
 
 # ---------------------------------------------------------------------------
 # HAS_GPU -- detected at launch time (not assumed), so the same command
-# works unchanged on GPU and non-GPU nodes. `nvidia-smi -L` fails fast and
-# silently if no driver/GPU is present, unlike a bare `nvidia-smi`.
+# works unchanged on GPU and non-GPU nodes. `nvidia-smi -L` exits 0 even on
+# a node with the driver installed but no GPU allocated/visible (it prints
+# "No devices found." to stdout rather than failing), so the exit code
+# alone can't be trusted -- check for an actual "GPU N: ..." line.
 # ---------------------------------------------------------------------------
 HAS_GPU=0
-if command -v nvidia-smi &>/dev/null && nvidia-smi -L &>/dev/null; then
+if command -v nvidia-smi &>/dev/null && nvidia-smi -L 2>/dev/null | grep -q '^GPU '; then
     HAS_GPU=1
 fi
