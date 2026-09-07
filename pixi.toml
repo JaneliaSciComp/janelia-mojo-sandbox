@@ -1,0 +1,52 @@
+[workspace]
+name = "janelia-mojo-sandbox"
+description = "Podman sandbox for the Mojo programming language, with NVIDIA GPU access and a ttyd web terminal, for Janelia classroom use"
+authors = ["Mark Kittisopikul <kittisopikulm@janelia.hhmi.org>"]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[dependencies]
+# Image-baked infra tools only. The Mojo/MAX toolchain itself is NOT baked
+# in here -- it lives in the seeded, user-editable container/app/pixi.toml,
+# installed into /work/app at container startup (see container/entrypoint.sh)
+# so students can `pixi add` packages without rebuilding the image.
+git = ">=2.55.0,<3"
+jq = ">=1.8.2,<2"
+vim = ">=9.2.785,<10"
+nano = ">=8.5,<9"
+ttyd = ">=1.7.7,<2"
+# Guarantees a `python3` with `tomllib` on the HOST side (not inside the
+# container) for common.sh's conf/config.toml parsing, independent of
+# whatever system python happens to be on a given login/compute node.
+python = ">=3.11,<3.14"
+
+[feature.https.dependencies]
+caddy = ">=2.11.4,<3"
+openssl = ">=3.6.3,<4"
+# conda-forge has no `qrencode` CLI package (only the C library,
+# `libqrencode`) -- use the `qr` CLI shipped by the python `qrcode`
+# package instead (prints ANSI QR art to the terminal by default, and
+# with `pillow` present can also write a PNG via `qr --output=file.png`).
+qrcode = ">=8.2,<9"
+pillow = ">=11,<12"
+
+[environments]
+https = ["https"]
+
+[tasks]
+build = "container/podman/build.sh"
+shell = "container/podman/shell.sh"
+# Plain HTTP (no Caddy/TLS of our own) -- for testing behind Fileglancer's
+# own HTTPS-wrapping of a plain-HTTP service. Needs nothing beyond the
+# default environment (no caddy/openssl/qrcode), unlike `terminal` below.
+terminal-http = "container/terminal-http.sh"
+
+[feature.https.tasks]
+# Self-managed TLS (own Caddy + self-signed cert). Declared under
+# [feature.https.tasks] (not plain [tasks]) so `pixi run terminal` always
+# resolves the "https" environment, which is the one that actually has
+# caddy/openssl/qrcode/pillow installed -- terminal-wrap.sh needs all of
+# them. See `terminal-http` above for the plain-HTTP alternative (e.g. for
+# Fileglancer's own HTTPS-wrapping).
+terminal = "container/terminal-wrap.sh"

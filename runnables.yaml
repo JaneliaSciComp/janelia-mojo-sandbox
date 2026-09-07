@@ -1,0 +1,147 @@
+name: Mojo Sandbox
+description: >-
+    Browser-based terminal (ttyd) inside a Podman sandbox with NVIDIA GPU
+    access, pixi, and the Mojo/MAX toolchain, for Janelia classroom use.
+    Single shared HTTP Basic Auth credential per launch, embedded in the
+    published URL and rendered as a QR code for students to scan/join.
+requirements:
+    - pixi
+runnables:
+    - id: mojo-terminal-https
+      name: Start Mojo Web Terminal (Podman, HTTPS)
+      type: service
+      working_dir: repo
+      description: >-
+          Serves a web terminal behind a local Caddy TLS-terminating
+          reverse proxy. The published URL carries a single shared
+          "classroom" login (regenerated per launch, persisted at
+          $WORK/.classroom-token) -- see the README's threat-model section.
+          A QR code for the URL is printed to this job's log and saved to
+          $WORK/qrcode.png.
+      pre_run: >-
+          [ -n "${FG_PHASE_PATH:-}" ] && printf pulling_image > "$FG_PHASE_PATH" || true
+      command: >-
+          PATH="$HOME/.pixi/bin:$PATH" pixi run --environment https
+          container/terminal-wrap.sh --https-port "$FG_SERVICE_PORT"
+      parameters:
+          - flag: --work
+            name: Work directory
+            type: directory
+            exists: false
+            description: >-
+                Writable host directory bound to /work inside the sandbox.
+                Use the SAME directory across the class for the default
+                shared-session mode; point at your own directory to launch
+                a fully separate, individually-credentialed instance.
+          - flag: --ro-path-1
+            name: Read-only path 1
+            type: directory
+            required: false
+            exists: true
+            description: >-
+                A host directory to bind read-only into the sandbox. Must
+                be a leaf path (e.g. /groups/scicompsoft), not a bare
+                autofs parent (/groups, /nrs, /scratch).
+          - flag: --ro-path-2
+            name: Read-only path 2
+            type: directory
+            required: false
+            exists: true
+            description: Same as "Read-only path 1", another optional slot.
+          - flag: --ro-path-3
+            name: Read-only path 3
+            type: directory
+            required: false
+            exists: true
+            description: Same as "Read-only path 1", another optional slot.
+          - flag: --ro-paths
+            name: Read-only paths (advanced)
+            type: string
+            required: false
+            description: >-
+                Space-separated host paths bound read-only into the
+                sandbox, for more than 3 paths or when scripting -- same
+                leaf-path rule as "Read-only path 1" above.
+          - flag: --keep-id
+            name: Run as your real identity (instructor only)
+            type: boolean
+            required: false
+            description: >-
+                Check this if you (the instructor) have a provisioned
+                /etc/subuid range and want files under the shared work
+                directory to land owned by your real host account. Students
+                launching their own individual instance should normally
+                leave this unchecked.
+      resources:
+          cpus: 2
+          walltime: "08:00"
+
+    - id: mojo-terminal-http
+      name: Start Mojo Web Terminal (Podman, plain HTTP)
+      type: service
+      working_dir: repo
+      description: >-
+          Same sandbox as "mojo-terminal-https" above, but serves ttyd over
+          PLAIN HTTP with no TLS of our own -- for testing Fileglancer's own
+          HTTPS-wrapping of a plain-HTTP service instead of this repo's
+          self-managed Caddy+cert path. Only use this where the hop between
+          this job and Fileglancer's proxy is trusted (e.g. entirely within
+          the Janelia cluster network). Same shared "classroom" login model
+          as the HTTPS runnable above.
+      pre_run: >-
+          [ -n "${FG_PHASE_PATH:-}" ] && printf pulling_image > "$FG_PHASE_PATH" || true
+      command: >-
+          PATH="$HOME/.pixi/bin:$PATH" pixi run
+          container/terminal-http.sh --port "$FG_SERVICE_PORT"
+      parameters:
+          - flag: --work
+            name: Work directory
+            type: directory
+            exists: false
+            description: >-
+                Writable host directory bound to /work inside the sandbox.
+                Use the SAME directory across the class for the default
+                shared-session mode; point at your own directory to launch
+                a fully separate, individually-credentialed instance.
+          - flag: --ro-path-1
+            name: Read-only path 1
+            type: directory
+            required: false
+            exists: true
+            description: >-
+                A host directory to bind read-only into the sandbox. Must
+                be a leaf path (e.g. /groups/scicompsoft), not a bare
+                autofs parent (/groups, /nrs, /scratch).
+          - flag: --ro-path-2
+            name: Read-only path 2
+            type: directory
+            required: false
+            exists: true
+            description: Same as "Read-only path 1", another optional slot.
+          - flag: --ro-path-3
+            name: Read-only path 3
+            type: directory
+            required: false
+            exists: true
+            description: Same as "Read-only path 1", another optional slot.
+          - flag: --ro-paths
+            name: Read-only paths (advanced)
+            type: string
+            required: false
+            description: >-
+                Space-separated host paths bound read-only into the
+                sandbox, for more than 3 paths or when scripting -- same
+                leaf-path rule as "Read-only path 1" above.
+          - flag: --keep-id
+            name: Run as your real identity (instructor only)
+            type: boolean
+            required: false
+            description: >-
+                Check this if you (the instructor) have a provisioned
+                /etc/subuid range and want files under the shared work
+                directory to land owned by your real host account. Students
+                launching their own individual instance should normally
+                leave this unchecked.
+      resources:
+          cpus: 2
+          walltime: "08:00"

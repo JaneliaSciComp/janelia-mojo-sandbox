@@ -1,0 +1,61 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Rootless Podman on this cluster has no /etc/subuid range for the current
+# user, so apt's privilege-drop sandbox (which wants to run as uid 42 /
+# _apt) cannot map that uid and fails. Disabling the sandbox is required.
+RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99no-sandbox && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        git \
+        bash \
+        tar \
+        xz-utils \
+        clang \
+        lld \
+        libc6-dev \
+        && \
+    rm -rf /var/lib/apt/lists/*
+
+# clang/lld/libc6-dev: `mojo build` links a native binary and needs a
+# system C toolchain + linker. LLVM (clang/lld) is used here in preference
+# to gcc/binutils, per project preference.
+
+ENV PIXI_HOME=/opt/pixi
+ENV PATH="$PIXI_HOME/bin:$PATH"
+
+# Same subuid constraint as above: the pixi installer's tar extraction
+# preserves ownership by default, which fails without a uid/gid mapping
+# range.
+ENV TAR_OPTIONS=--no-same-owner
+RUN curl -fsSL https://pixi.sh/install.sh | bash
+
+# Image-baked infra tools only (the repo's top-level pixi.toml default
+# environment: git, jq, vim, nano, ttyd, python). The `https` feature
+# environment (caddy, openssl, qrcode/pillow for the QR code) is NOT
+# installed here -- those run on the HOST via container/terminal-wrap.sh,
+# never inside the container.
+#
+# The Mojo/MAX toolchain itself is also NOT baked in here -- it's installed
+# into /work/app at container startup from the seeded container/app, so
+# students can edit dependencies without a rebuild (see entrypoint.sh).
+COPY pixi.toml pixi.lock /opt/app/
+WORKDIR /opt/app
+RUN pixi install --locked
+
+ENV PIXI_ENV=/opt/app/.pixi/envs/default
+ENV PATH="$PIXI_ENV/bin:$PATH"
+
+COPY container/app /opt/app/seed/app
+COPY container/entrypoint.sh /opt/app/entrypoint.sh
+RUN chmod +x /opt/app/entrypoint.sh
+
+RUN chmod -R a+rX /opt/app/.pixi /opt/pixi /opt/app/seed
+
+EXPOSE 7681
+
+ENTRYPOINT ["/opt/app/entrypoint.sh"]
+CMD ["bash"]

@@ -1,0 +1,8 @@
+# Optional defaults for --work / --port / --https-port / --ro-paths, read by
+# container/common.sh whenever the matching flag/env var isn't given
+# explicitly. Safe to edit locally; not required for the sandbox to run.
+#
+# work = "/scratch/YOUR_USER/mojo-work"
+# port = 7681
+# https_port = 8443
+# ro_paths = ["/groups/scicompsoft"]
