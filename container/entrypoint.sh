@@ -47,5 +47,11 @@ fi
 #    /work env, not the image's own baked infra-tools env.
 export PATH="$APP_DIR/.pixi/envs/default/bin:$PATH"
 
+# `mojo` cannot locate its standard library without MODULAR_HOME -- this is
+# normally set by pixi's shell activation hook, which a plain PATH prepend
+# skips entirely. Without it, `mojo run`/`mojo build` fail with "unable to
+# locate module 'std'" even though `mojo --version` works fine.
+export MODULAR_HOME="$APP_DIR/.pixi/envs/default/share/max"
+
 # 4. Hand off to whatever CMD was requested.
 exec "$@"
