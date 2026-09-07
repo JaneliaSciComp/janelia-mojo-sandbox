@@ -181,6 +181,15 @@ podman_run_watched() {
     podman "${PODMAN_GLOBAL_ARGS[@]}" run --cidfile "$cidfile" "${_args_ref[@]}" <&3 &
     local podman_pid=$!
 
+    # Forward INT/TERM to the actual `podman run` process. Callers of this
+    # function (shell.sh) are themselves often launched backgrounded by a
+    # wrapper (terminal-wrap.sh's cleanup trap signals shell.sh's PID, not
+    # this function's podman child) -- without this, killing the wrapper
+    # leaves podman/ttyd/the container running as an orphan forever, which
+    # is exactly the "LSF job stuck in RUN state" failure mode this
+    # project's cleanup path exists to prevent.
+    trap 'kill -TERM "$podman_pid" 2>/dev/null || true' INT TERM
+
     local catatonit_pid
     catatonit_pid="$(_podman_resolve_catatonit_pid "$cidfile")"
 
@@ -193,7 +202,14 @@ podman_run_watched() {
     local watchdog_pid=$!
 
     local exit_code=0
-    wait "$podman_pid" || exit_code=$?
+    # A caught INT/TERM interrupts `wait` early (128+signum) before podman
+    # has actually finished exiting -- loop until it's truly gone so the
+    # caller's post-return cleanup (storage removal) doesn't race with
+    # podman's own in-flight `--rm` teardown.
+    while kill -0 "$podman_pid" 2>/dev/null; do
+        wait "$podman_pid" 2>/dev/null && exit_code=0 || exit_code=$?
+    done
+    trap - INT TERM
     kill "$watchdog_pid" 2>/dev/null
     wait "$watchdog_pid" 2>/dev/null || true
     # One more check right after podman_pid itself has exited -- the race
