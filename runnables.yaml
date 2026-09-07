@@ -27,6 +27,7 @@ runnables:
           - flag: --work
             name: Work directory
             type: directory
+            required: true
             exists: false
             description: >-
                 Writable host directory bound to /work inside the sandbox.
@@ -97,6 +98,7 @@ runnables:
           - flag: --work
             name: Work directory
             type: directory
+            required: true
             exists: false
             description: >-
                 Writable host directory bound to /work inside the sandbox.
