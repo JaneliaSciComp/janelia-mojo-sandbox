@@ -61,6 +61,20 @@ set shiftwidth=4   " Number of spaces used for each step of (auto)indent
 set expandtab      " Converts tabs to spaces
 VIMRCEOF
 
+# Vim's own bundled Mojo syntax/indent/ftplugin files (vim92/{syntax,
+# ftplugin,indent}/mojo.vim) are last updated 2023-09 and don't know any
+# Mojo-specific keyword ('fn', 'struct', 'trait', 'alias', 'owned',
+# 'borrowed', 'inout', 'raises') -- they're really just Python's
+# highlighting relabeled. Replace them with Modular's own actively
+# maintained plugin (github.com/modular/mojo.vim, Apache-2.0), pinned to
+# a commit for reproducibility.
+ARG MOJO_VIM_COMMIT=e5d7af4c1896f903694aed79b9e3be14d75eba17
+RUN VIM92=/opt/app/.pixi/envs/default/share/vim/vim92 && \
+    mkdir -p "$VIM92/ftdetect" && \
+    for f in syntax/mojo.vim ftplugin/mojo.vim indent/mojo.vim autoload/mojo.vim ftdetect/mojo.vim; do \
+        curl -fsSL "https://raw.githubusercontent.com/modular/mojo.vim/${MOJO_VIM_COMMIT}/${f}" -o "$VIM92/$f"; \
+    done
+
 # Welcome-banner text: a colorized "hhmi | janelia" wordmark, matching
 # https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png
 # for a dark terminal background. Rendered as real ANSI-colored text, not
