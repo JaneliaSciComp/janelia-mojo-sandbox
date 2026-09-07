@@ -75,6 +75,31 @@ RUN VIM92=/opt/app/.pixi/envs/default/share/vim/vim92 && \
         curl -fsSL "https://raw.githubusercontent.com/modular/mojo.vim/${MOJO_VIM_COMMIT}/${f}" -o "$VIM92/$f"; \
     done
 
+# Even Modular's own plugin above doesn't highlight Mojo's actual
+# standard-library type names as types -- its "builtin" keyword list is
+# inherited straight from Python's (str, int, float, dict, ...), not
+# Mojo's capitalized ones (Int, String, SIMD, DType, ...). Layered on top
+# via vim's "after/syntax" mechanism (sourced after the main syntax file,
+# specifically for this kind of augmentation) rather than editing the
+# vendored file directly, so re-pinning MOJO_VIM_COMMIT above doesn't
+# require re-merging this in.
+RUN mkdir -p /opt/app/.pixi/envs/default/share/vim/vimfiles/after/syntax && \
+    cat > /opt/app/.pixi/envs/default/share/vim/vimfiles/after/syntax/mojo.vim <<'MOJOTYPESEOF'
+" Mojo's own standard-library type names, highlighted as types (neither
+" vim's bundled mojo.vim nor modular/mojo.vim do this -- see Containerfile).
+syn keyword mojoType Int Int8 Int16 Int32 Int64 Int128 Int256
+syn keyword mojoType UInt UInt8 UInt16 UInt32 UInt64 UInt128 UInt256
+syn keyword mojoType Float16 Float32 Float64 BFloat16
+syn keyword mojoType Bool Byte
+syn keyword mojoType String StringLiteral StringRef StringSlice
+syn keyword mojoType List Dict Set Tuple Optional Variant ListLiteral
+syn keyword mojoType SIMD DType Scalar
+syn keyword mojoType Error NoneType AnyType
+syn keyword mojoType Reference UnsafePointer Pointer Span Slice
+syn keyword mojoType Coroutine CoroutineContext PythonObject Atomic
+hi def link mojoType Type
+MOJOTYPESEOF
+
 # Welcome-banner text: a colorized "hhmi | janelia" wordmark, matching
 # https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png
 # for a dark terminal background. Rendered as real ANSI-colored text, not
