@@ -20,7 +20,7 @@
 #   ./shell.sh --ro-paths "/groups/scicompsoft /nrs/scicompsoft"
 #   ./shell.sh --keep-id                     # instructor use -- see common.sh
 #   ./shell.sh -- ttyd -i 127.0.0.1 -p 7681 -W bash   # used by terminal-wrap.sh
-#   IMAGE=janelia-mojo-sandbox:latest ./shell.sh
+#   IMAGE=janelia-mojo-sandbox:latest ./shell.sh   # skip the registry, use a local build
 set -euo pipefail
 
 # Save the real stdin before podman run backgrounds (needed for lib.sh's
@@ -35,15 +35,34 @@ _CALLER_PWD="$PWD"
 
 cd "$(dirname "$0")"
 
-IMAGE="${IMAGE:-janelia-mojo-sandbox:latest}"
+_IMAGE_EXPLICIT=0; [[ -n "${IMAGE:-}" ]] && _IMAGE_EXPLICIT=1
+IMAGE="${IMAGE:-ghcr.io/janeliascicomp/janelia-mojo-sandbox:latest}"
+LOCAL_IMAGE="janelia-mojo-sandbox:latest"
 
 # shellcheck source=../common.sh
 source "../common.sh"
 # shellcheck source=lib.sh
 source "./lib.sh"
 
-podman_resolve_image
+_set_phase() {
+    [[ -n "${FG_PHASE_PATH:-}" ]] && printf '%s' "$1" > "$FG_PHASE_PATH" 2>/dev/null
+    return 0
+}
+
+# Must run BEFORE podman_resolve_image: it redirects Podman's storage off
+# NFS (via _podman_storage_shared_setup), which a `podman pull` needs
+# active too, not just `podman run`/build.sh -- otherwise the pull fails
+# outright (lsetxattr on NFS) and every launch would silently fall back to
+# a from-scratch local build regardless of the registry.
 podman_storage_setup_job
+
+# Same pull-then-build-fallback marimo_ai_sandbox uses (see lib.sh's
+# podman_resolve_image) -- without this, a node's very first launch pays
+# for a multi-minute from-scratch build instead of a fast registry pull,
+# and a stale local image from before a Containerfile change would
+# otherwise be reused forever.
+podman_resolve_image "$IMAGE" "$LOCAL_IMAGE" "$_IMAGE_EXPLICIT"
+IMAGE="$RESOLVED_IMAGE"
 
 cleanup() {
     podman_storage_cleanup

@@ -219,16 +219,54 @@ podman_run_watched() {
     return "$exit_code"
 }
 
-# podman_resolve_image -- v1: always build locally if the image isn't
-# already present. No registry-pull path yet (no
-# .github/workflows/publish-image.yml exists for this repo) -- a
-# future add-on, well-precedented in marimo_ai_sandbox, not needed now.
+# podman_resolve_image -- resolves $IMAGE to something runnable. Ported
+# from marimo_ai_sandbox's lib.sh (same pattern, same rationale).
 #
-# Sets: nothing (uses $IMAGE directly); builds via build.sh if missing.
+# Unless the caller explicitly set $IMAGE (env var or --image-style
+# override), this checks the registry for updates on EVERY invocation via
+# `podman pull` (cheap -- a manifest-digest check, not a re-download,
+# unless the image actually changed) rather than only pulling if nothing
+# is cached at all, which would otherwise silently reuse a local image
+# cached from before a pixi.toml/Containerfile change forever, since
+# nothing would ever re-validate it once it existed once. This also means
+# a node's very first launch of this app doesn't pay for a multi-minute
+# from-scratch build (apt-get, pixi install, mojo) when a fast registry
+# pull would do -- ttyd/Caddy only wait ~30s for the backend, so a cold
+# build can otherwise show up as several minutes of confusing 502s.
+#
+# Usage: podman_resolve_image REMOTE_IMAGE LOCAL_IMAGE IMAGE_WAS_EXPLICIT
+#   REMOTE_IMAGE       the ghcr.io reference to check/pull
+#   LOCAL_IMAGE        the local-build fallback tag
+#   IMAGE_WAS_EXPLICIT "1" if the caller's $IMAGE was set by the user
+#                      (env var override) rather than defaulted -- skips
+#                      the registry entirely in that case, building only
+#                      if that exact image is missing (the existing
+#                      "IMAGE=janelia-mojo-sandbox:latest ...to skip the
+#                      registry" escape hatch, preserved as-is)
+#
+# Calls the caller's `_set_phase` if defined (shell.sh, terminal-wrap.sh,
+# terminal-http.sh all define one) to report "pulling_image" the same way
+# their other phases are reported.
+#
+# Sets: RESOLVED_IMAGE -- the image reference the caller should actually run
 podman_resolve_image() {
-    : "${IMAGE:=janelia-mojo-sandbox:latest}"
-    if ! podman image exists "$IMAGE" &>/dev/null; then
-        echo ">> Image '$IMAGE' not found locally -- building it now ..."
-        bash "$(dirname "${BASH_SOURCE[0]}")/build.sh"
+    local remote="$1" local_image="$2" explicit="$3"
+    RESOLVED_IMAGE="$remote"
+
+    if [[ "$explicit" == "1" ]]; then
+        podman image exists "$RESOLVED_IMAGE" &>/dev/null || bash "$(dirname "${BASH_SOURCE[0]}")/build.sh"
+        return 0
+    fi
+
+    echo ">> Checking '$RESOLVED_IMAGE' for updates ..."
+    declare -F _set_phase &>/dev/null && _set_phase pulling_image
+    if ! podman pull "$RESOLVED_IMAGE"; then
+        if podman image exists "$RESOLVED_IMAGE" &>/dev/null; then
+            echo ">> Pull failed (offline/registry unreachable?) -- reusing existing cached '$RESOLVED_IMAGE'." >&2
+        else
+            echo ">> Pull failed and no local copy exists -- building '$local_image' from source instead ..." >&2
+            RESOLVED_IMAGE="$local_image"
+            podman image exists "$RESOLVED_IMAGE" &>/dev/null || bash "$(dirname "${BASH_SOURCE[0]}")/build.sh"
+        fi
     fi
 }
