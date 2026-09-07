@@ -58,23 +58,30 @@ SHELL_FLAGS=(--work "$WORK")
 [[ -n "$RO_PATHS" ]] && SHELL_FLAGS+=(--ro-paths "$RO_PATHS")
 [[ "$KEEP_ID" == "1" ]] && SHELL_FLAGS+=(--keep-id)
 
-HOST_NAME="$(hostname -f 2>/dev/null || hostname)"
+# Prefer Fileglancer's own minted hostname (FG_HOSTNAME) when present -- it's
+# what Fileglancer's HTTPS proxy (JaneliaSciComp/fileglancer#440) validates
+# a published upstream against (service_proxy_upstream_zone/_networks), so
+# using our own `hostname -f` here could mismatch (FQDN vs short name) and
+# get the proxied URL refused.
+HOST_NAME="${FG_HOSTNAME:-$(hostname -f 2>/dev/null || hostname)}"
 LOCAL_URL="http://${AUTH_USER}:${TOKEN}@${HOST_NAME}:${PORT}/"
 
 echo ">> Serving PLAIN HTTP web terminal on 0.0.0.0:${PORT} (work dir: $WORK)"
 echo ">> Unencrypted -- only expose this behind a trusted proxy that"
 echo ">> terminates TLS for you (e.g. Fileglancer's HTTPS-wrapping)."
 echo ">> Login: ${AUTH_USER} / ${TOKEN}"
+echo ">> Local URL: $LOCAL_URL"
 
 if [[ -n "${SERVICE_URL_PATH:-}" ]]; then
-    # Running as a Fileglancer job: Fileglancer's own auto_url mechanism
-    # publishes the externally-reachable (and, when its HTTPS-wrapping is
-    # enabled, TLS-terminated) URL for a plain-HTTP service on its own --
-    # deliberately NOT writing $SERVICE_URL_PATH here ourselves, to avoid
-    # racing/conflicting with that.
-    echo ">> Running under Fileglancer -- it will publish the externally-reachable URL itself."
+    # Fileglancer's HTTPS proxy (docs/ServiceProxy.md in JaneliaSciComp/
+    # fileglancer) only ever REPUBLISHES over HTTPS whatever raw URL a job
+    # writes here itself -- it does not detect a listening port on its own.
+    # Write it plainly once; Fileglancer re-publishes it at a signed
+    # per-job HTTPS subdomain if apps.service_proxy_domain is configured,
+    # or shows this raw URL unchanged otherwise.
+    printf '%s' "$LOCAL_URL" > "$SERVICE_URL_PATH"
+    echo ">> Published to Fileglancer: $SERVICE_URL_PATH"
 else
-    echo ">> Local URL: $LOCAL_URL"
     if command -v qr >/dev/null 2>&1; then
         echo ">> Scan to join (or open the URL above):"
         qr "$LOCAL_URL"
