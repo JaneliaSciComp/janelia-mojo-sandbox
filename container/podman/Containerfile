@@ -51,12 +51,19 @@ RUN pixi install --locked
 # without this -- there's no system /etc/nanorc by default.
 RUN echo 'include "/opt/app/.pixi/envs/default/share/nano/*.nanorc"' > /etc/nanorc
 
+# Welcome-banner art: a truecolor ANSI rendering (via `chafa`, not a
+# runtime dependency -- pre-rendered once offline and committed as a
+# static asset) of the HHMI Janelia logo for a dark terminal background
+# (https://www.janelia.org/sites/default/files/Design/HHMI_Janelia_Logo_Black_Background.png).
+COPY container/motd.ans /opt/app/motd.ans
+
 # Classroom cosmetics: Ubuntu's default /etc/bash.bashrc (sourced by every
 # interactive shell, login or not) unconditionally sets PS1 to \u@\h:\w
 # further up in this same file -- appending our override here, after it,
 # is the only way to reliably win rather than just being clobbered.
 # Also enables colorized `ls`/`grep`, off by default since a student's
-# $HOME has no .bashrc of its own to turn it on (see entrypoint.sh).
+# $HOME has no .bashrc of its own to turn it on (see entrypoint.sh), and
+# prints the welcome banner once per interactive shell.
 RUN cat >> /etc/bash.bashrc <<'RCEOF'
 
 # Janelia Mojo Sandbox classroom cosmetics
@@ -64,6 +71,7 @@ PS1='student@janelia:\w\$ '
 eval "$(dircolors -b 2>/dev/null)"
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
+[ -t 1 ] && cat /opt/app/motd.ans
 RCEOF
 
 ENV PIXI_ENV=/opt/app/.pixi/envs/default
