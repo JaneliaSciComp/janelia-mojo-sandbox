@@ -98,6 +98,11 @@ syn keyword mojoType Error NoneType AnyType
 syn keyword mojoType Reference UnsafePointer Pointer Span Slice
 syn keyword mojoType Coroutine CoroutineContext PythonObject Atomic
 hi def link mojoType Type
+
+" 'comptime' and 'capturing' postdate modular/mojo.vim's last update
+" (2023-02) but show up in Modular's own, more recently updated TextMate
+" grammar (github.com/modular/mojo-syntax) -- borrowed from there.
+syn keyword mojoStatement comptime capturing
 MOJOTYPESEOF
 
 # Welcome-banner text: a colorized "hhmi | janelia" wordmark, matching
