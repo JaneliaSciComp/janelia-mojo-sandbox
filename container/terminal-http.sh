@@ -64,7 +64,13 @@ SHELL_FLAGS=(--work "$WORK")
 # using our own `hostname -f` here could mismatch (FQDN vs short name) and
 # get the proxied URL refused.
 HOST_NAME="${FG_HOSTNAME:-$(hostname -f 2>/dev/null || hostname)}"
-LOCAL_URL="http://${AUTH_USER}:${TOKEN}@${HOST_NAME}:${PORT}/"
+# No embedded userinfo (classroom:token@) -- Fileglancer's proxy resolver
+# requires a bare `host:port` netloc and hard-refuses anything else
+# (fileglancer/apps/serviceproxy.py's _UPSTREAM_RE), so a userinfo-bearing
+# URL here gets a 403 (nginx then shows its own 503 page) even though the
+# service itself is up. The credential is still enforced by ttyd's Basic
+# Auth -- printed below for the student to enter by hand when prompted.
+LOCAL_URL="http://${HOST_NAME}:${PORT}/"
 
 echo ">> Serving PLAIN HTTP web terminal on 0.0.0.0:${PORT} (work dir: $WORK)"
 echo ">> Unencrypted -- only expose this behind a trusted proxy that"
