@@ -16,6 +16,10 @@ jq = ">=1.8.2,<2"
 vim = ">=9.2.785,<10"
 nano = ">=8.5,<9"
 ttyd = ">=1.7.7,<2"
+tmux = ">=3.7c_,<4"
+screen = ">=4.8.0,<5"
+bat = ">=0.26.1,<0.27"
+hyperfine = ">=1.20.0,<2"
 # Guarantees a `python3` with `tomllib` on the HOST side (not inside the
 # container) for common.sh's conf/config.toml parsing, independent of
 # whatever system python happens to be on a given login/compute node.
