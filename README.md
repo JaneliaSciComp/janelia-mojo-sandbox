@@ -106,7 +106,11 @@ is signed by a CA that's actually installed in your trust store, so there's
 no browser warning to click through for the class to deal with. If `pca`
 isn't installed, or hasn't been initialized yet, this falls straight back
 to the self-signed cert above with no error -- purely an opportunistic
-upgrade, not a new requirement.
+upgrade, not a new requirement. Get `pca` onto `PATH` with `pixi global
+install --git https://github.com/JaneliaSciComp/personal-certificate-authority`;
+see "Getting `pca` itself onto PATH" in [that project's integration
+guide](https://github.com/JaneliaSciComp/personal-certificate-authority/blob/main/docs/Integration.md)
+for details/alternatives.
 
 ## Mojo environment
 
