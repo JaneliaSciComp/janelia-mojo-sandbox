@@ -97,6 +97,21 @@ compute node). Accept/proceed past the warning -- see Caddy's docs or your
 browser's "Advanced -> Proceed" flow. The cert's path is printed at
 startup if you'd rather install it in your trust store.
 
+**Using a trusted cert instead, when available:** if the
+[`pca`](https://github.com/JaneliaSciComp/personal-certificate-authority)
+CLI is on `PATH` (and `pca init` has been run once), `caddy_generate_cert`
+prefers a `pca`-issued certificate over generating its own self-signed one --
+no flag or config needed, it's detected automatically. A `pca`-issued cert
+is signed by a CA that's actually installed in your trust store, so there's
+no browser warning to click through for the class to deal with. If `pca`
+isn't installed, or hasn't been initialized yet, this falls straight back
+to the self-signed cert above with no error -- purely an opportunistic
+upgrade, not a new requirement. Get `pca` onto `PATH` with `pixi global
+install --git https://github.com/JaneliaSciComp/personal-certificate-authority`;
+see "Getting `pca` itself onto PATH" in [that project's integration
+guide](https://github.com/JaneliaSciComp/personal-certificate-authority/blob/main/docs/Integration.md)
+for details/alternatives.
+
 ## Mojo environment
 
 The Mojo/MAX toolchain is **not** baked into the container image. It's
