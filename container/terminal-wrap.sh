@@ -97,15 +97,25 @@ caddy_start "$HTTPS_PORT" "$INTERNAL_PORT"
 caddy_publish_service_url "$HTTPS_PORT" "$TTYD_PID" "$FULL_URL"
 
 # QR code for the shared classroom login: an ASCII/ANSI rendering straight
-# to this job's log (for the instructor to screenshare/project), plus a PNG
-# saved under $WORK for anyone who wants a cleaner image to display
-# separately. Both encode the same credential-embedded URL -- scanning
-# either gets a student straight into the shared session with no separate
-# login step.
+# to this job's log (for the instructor to screenshare/project) and also
+# saved to $WORK/qr.txt (so it can be `cat`'d again from inside the sandbox
+# terminal, since $WORK is bind-mounted there -- the log can be inconvenient
+# to scroll back through mid-class), plus a PNG saved under $WORK for anyone
+# who wants a cleaner image to display separately. All three encode the same
+# credential-embedded URL -- scanning (or reading) any of them gets a
+# student straight into the shared session with no separate login step.
+#
+# --ascii is required here: `qr` decides PNG-vs-ASCII by checking whether
+# its own stdout is a tty, and under Fileglancer/LSF this script's stdout
+# is always redirected to a log file, so without --ascii it silently dumps
+# raw PNG bytes into the job log instead of a scannable code. The ASCII
+# output has no ANSI escapes (plain UTF-8 block characters), so it's safe
+# to tee straight into a text file.
 echo ">> Scan to join (or open the URL above):"
-qr "$FULL_URL"
+qr --ascii "$FULL_URL" | tee "$WORK/qr.txt"
+echo ">> QR code (ASCII) also saved to $WORK/qr.txt -- cat it from inside the sandbox terminal if needed."
 qr --output="$WORK/qrcode.png" "$FULL_URL" 2>/dev/null || true
-echo ">> QR code also saved to $WORK/qrcode.png"
+echo ">> QR code (PNG) also saved to $WORK/qrcode.png"
 
 # Wait on EITHER the web terminal or Caddy, not just Caddy -- if the
 # container itself exits (e.g. crash), tear the whole job down instead of

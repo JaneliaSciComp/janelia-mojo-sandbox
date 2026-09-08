@@ -90,7 +90,8 @@ if [[ -n "${SERVICE_URL_PATH:-}" ]]; then
 else
     if command -v qr >/dev/null 2>&1; then
         echo ">> Scan to join (or open the URL above):"
-        qr "$LOCAL_URL"
+        qr --ascii "$LOCAL_URL" | tee "$WORK/qr.txt"
+        echo ">> QR code (ASCII) also saved to $WORK/qr.txt -- cat it from inside the sandbox terminal if needed."
     fi
 fi
 
