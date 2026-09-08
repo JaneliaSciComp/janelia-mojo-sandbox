@@ -122,8 +122,12 @@ COPY container/motd.ans /opt/app/motd.ans
 # prints the welcome banner once per interactive shell.
 RUN cat >> /etc/bash.bashrc <<'RCEOF'
 
-# Janelia Mojo Sandbox classroom cosmetics
-PS1='student@janelia:\w\$ '
+# Janelia Mojo Sandbox classroom cosmetics -- "student" in the same
+# teal-to-green gradient as the welcome banner's "hhmi", "@janelia" in
+# bold white matching the banner's "janelia". \[...\] markers tell bash
+# the enclosed escape codes are zero-width, so line-wrapping/cursor math
+# doesn't get thrown off by them.
+PS1='\[\033[1;38;2;5;141;150m\]s\[\033[1;38;2;18;148;137m\]t\[\033[1;38;2;31;154;124m\]u\[\033[1;38;2;44;160;111m\]d\[\033[1;38;2;56;167;98m\]e\[\033[1;38;2;69;174;85m\]n\[\033[1;38;2;82;180;72m\]t\[\033[0m\]\[\033[1;38;2;255;255;255m\]@janelia\[\033[0m\]:\w\$ '
 eval "$(dircolors -b 2>/dev/null)"
 alias ls='ls --color=auto'
 alias grep='grep --color=auto'
